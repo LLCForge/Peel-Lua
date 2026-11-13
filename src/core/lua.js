@@ -77,6 +77,17 @@ export function fixSemicolons(code, version) {
   return edits.length ? applyEdits(code, edits).code : code;
 }
 
+/** Yerine yazılan metin komşu sözcüğe yapışmasın: return(5) → return5 olmaz, return 5 olur */
+export function pad(code, start, end, text) {
+  const word = /[\w.]/;
+  let t = text;
+  if (start > 0 && /\w/.test(code[start - 1]) && word.test(t[0] ?? '')) t = ` ${t}`;
+  if (end < code.length && /\w/.test(code[end]) && word.test(t.at(-1) ?? '')) t = `${t} `;
+  // a - -1 → a--1 yorum olur
+  if (start > 0 && code[start - 1] === '-' && t[0] === '-') t = ` ${t}`;
+  return t;
+}
+
 export function applyEdits(code, edits) {
   const sorted = [...edits].sort((a, b) => b.start - a.start || b.end - a.end);
   let out = code;

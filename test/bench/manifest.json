@@ -1,0 +1,254 @@
+{
+  "prom-cff--mini": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-cff",
+    "preset": "Cff",
+    "source": "mini",
+    "seed": 7,
+    "bytes": 2757
+  },
+  "prom-constantarray--inventory": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-constantarray",
+    "preset": "ConstantArray",
+    "source": "inventory",
+    "seed": 7,
+    "bytes": 3461
+  },
+  "prom-constantarray--textutil": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-constantarray",
+    "preset": "ConstantArray",
+    "source": "textutil",
+    "seed": 8,
+    "bytes": 3334
+  },
+  "prom-encryptstrings--loader": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-encryptstrings",
+    "preset": "EncryptStrings",
+    "source": "loader",
+    "seed": 9,
+    "bytes": 1425
+  },
+  "prom-encryptstrings--mini": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-encryptstrings",
+    "preset": "EncryptStrings",
+    "source": "mini",
+    "seed": 7,
+    "bytes": 1265
+  },
+  "prom-encryptstrings--textutil": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-encryptstrings",
+    "preset": "EncryptStrings",
+    "source": "textutil",
+    "seed": 8,
+    "bytes": 2311
+  },
+  "prom-medium--inventory": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-medium",
+    "preset": "Medium",
+    "source": "inventory",
+    "seed": 8,
+    "bytes": 224941
+  },
+  "prom-medium--loader": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-medium",
+    "preset": "Medium",
+    "source": "loader",
+    "seed": 10,
+    "bytes": 100478
+  },
+  "prom-medium--mini": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-medium",
+    "preset": "Medium",
+    "source": "mini",
+    "seed": 7,
+    "bytes": 115120
+  },
+  "prom-medium--textutil": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-medium",
+    "preset": "Medium",
+    "source": "textutil",
+    "seed": 9,
+    "bytes": 244137
+  },
+  "prom-minify--textutil": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-minify",
+    "preset": "Minify",
+    "source": "textutil",
+    "seed": 7,
+    "bytes": 967
+  },
+  "prom-numberstoexpressions--mini": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-numberstoexpressions",
+    "preset": "NumbersToExpressions",
+    "source": "mini",
+    "seed": 7,
+    "bytes": 479
+  },
+  "prom-numberstoexpressions--textutil": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-numberstoexpressions",
+    "preset": "NumbersToExpressions",
+    "source": "textutil",
+    "seed": 8,
+    "bytes": 1449
+  },
+  "prom-proxifylocals--mini": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-proxifylocals",
+    "preset": "ProxifyLocals",
+    "source": "mini",
+    "seed": 7,
+    "bytes": 597
+  },
+  "prom-proxifylocals--textutil": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-proxifylocals",
+    "preset": "ProxifyLocals",
+    "source": "textutil",
+    "seed": 8,
+    "bytes": 2706
+  },
+  "prom-splitstrings--inventory": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-splitstrings",
+    "preset": "SplitStrings",
+    "source": "inventory",
+    "seed": 7,
+    "bytes": 1162
+  },
+  "prom-strong--inventory": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-strong",
+    "preset": "Strong",
+    "source": "inventory",
+    "seed": 8,
+    "bytes": 273193
+  },
+  "prom-strong--mini": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-strong",
+    "preset": "Strong",
+    "source": "mini",
+    "seed": 7,
+    "bytes": 148931
+  },
+  "prom-strong--textutil": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-strong",
+    "preset": "Strong",
+    "source": "textutil",
+    "seed": 9,
+    "bytes": 299950
+  },
+  "prom-vmify--inventory": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-vmify",
+    "preset": "Vmify",
+    "source": "inventory",
+    "seed": 8,
+    "bytes": 30195
+  },
+  "prom-vmify--loader": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-vmify",
+    "preset": "Vmify",
+    "source": "loader",
+    "seed": 10,
+    "bytes": 11684
+  },
+  "prom-vmify--mini": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-vmify",
+    "preset": "Vmify",
+    "source": "mini",
+    "seed": 7,
+    "bytes": 13443
+  },
+  "prom-vmify--textutil": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-vmify",
+    "preset": "Vmify",
+    "source": "textutil",
+    "seed": 9,
+    "bytes": 33857
+  },
+  "prom-weak--inventory": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-weak",
+    "preset": "Weak",
+    "source": "inventory",
+    "seed": 8,
+    "bytes": 8208
+  },
+  "prom-weak--loader": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-weak",
+    "preset": "Weak",
+    "source": "loader",
+    "seed": 10,
+    "bytes": 4262
+  },
+  "prom-weak--mini": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-weak",
+    "preset": "Weak",
+    "source": "mini",
+    "seed": 7,
+    "bytes": 5197
+  },
+  "prom-weak--textutil": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-weak",
+    "preset": "Weak",
+    "source": "textutil",
+    "seed": 9,
+    "bytes": 8899
+  },
+  "prom-wrapinfunction--mini": {
+    "tool": "Prometheus",
+    "commit": "a98c501",
+    "job": "prom-wrapinfunction",
+    "preset": "WrapInFunction",
+    "source": "mini",
+    "seed": 7,
+    "bytes": 232
+  }
+}
