@@ -1,0 +1,54 @@
+{
+  "name": "peel-lua",
+  "version": "0.1.0",
+  "description": "Open-source Lua deobfuscator that runs in your browser. Your code never leaves your device.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "peel-lua": "bin/peel-lua.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LLCForge/Peel-Lua.git"
+  },
+  "homepage": "https://github.com/LLCForge/Peel-Lua#readme",
+  "keywords": [
+    "deobfuscator",
+    "lua",
+    "luau",
+    "roblox",
+    "fivem",
+    "garrysmod",
+    "backdoor",
+    "malware-analysis",
+    "security"
+  ],
+  "engines": {
+    "node": ">=25"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node test/run.js && node test/all.js",
+    "bench": "node test/bench.js"
+  },
+  "dependencies": {
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/language": "^6.13.1",
+    "@codemirror/legacy-modes": "^6.5.5",
+    "@codemirror/search": "^6.7.2",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.15",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@johnnymorganz/stylua": "^2.6.0",
+    "@lezer/highlight": "^1.2.5",
+    "lua-wasm-bindings": "^0.5.3",
+    "luaparse": "^0.3.1",
+    "luau-web": "^1.5.1"
+  },
+  "devDependencies": {
+    "vite": "^6.4.6"
+  }
+}
