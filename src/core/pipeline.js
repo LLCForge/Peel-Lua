@@ -5,6 +5,7 @@ import { PASSES } from './registry.js';
 import { tryParse, fixSemicolons } from './lua.js';
 import { format } from './format.js';
 import { toText } from './bstr.js';
+import { lowerLuau } from './luau.js';
 
 const MAX_ROUNDS = 20;
 
@@ -28,9 +29,9 @@ function snapshotOf(r) {
 }
 const same = (a, b) => a.ok === b.ok && a.out === b.out && a.fx === b.fx && a.errors === b.errors;
 
-async function pickVersion(sandbox, code, platform, log) {
+async function pickVersion(sandbox, code, platform, log, order = sandbox.versions) {
   let best = null;
-  for (const version of sandbox.versions) {
+  for (const version of order) {
     if (!tryParse(code, version)) continue;
     const r = await sandbox.run({ code, version, platform });
     const syntax = (r.errors ?? []).some((e) => e.startsWith('syntax:'));
@@ -56,11 +57,31 @@ export async function deobfuscate(input, { sandbox, only = null, onLog = () => {
   const shebang = /^#[^\n]*/.exec(code)?.[0] ?? null;
   if (shebang) code = code.slice(shebang.length);
 
+  // Luau: Lua sürümlerinin hiçbiri ayrıştıramıyorsa Luau'ya özgü sözdizimi Lua'ya indirilir (core/luau.js)
+  let luau = null;
+  if (!sandbox.versions.some((v) => tryParse(code, v))) {
+    const low = lowerLuau(code);
+    if (low.code && tryParse(low.code, low.goto ? '5.2' : '5.1')) {
+      luau = { source: code, goto: low.goto, verified: false };
+      code = low.code;
+      log(`Luau sözdizimi Lua'ya indirildi${low.goto ? ' (continue → goto: Lua 5.2+)' : ''}`, 'info');
+    } else if (low.error) log(`Luau indirilemedi: ${low.error}`, 'warn');
+  }
+  const origin = code; // indirilmiş (Luau) ya da özgün kod: platform tanınınca temel bunun üzerinde yeniden alınır
   const plat = platform === undefined ? detectPlatform(code) : platform;
-  const picked = await pickVersion(sandbox, code, plat, log);
+  // Luau sayıları tek türlüdür (float): tam sayı/float ayrımı olmayan 5.1/5.2 önce denenir
+  const picked = await pickVersion(sandbox, code, plat, log, luau ? ['5.1', '5.2', '5.3', '5.4'].filter((v) => sandbox.versions.includes(v)) : sandbox.versions);
   if (!picked) return { error: 'Kod ayrıştırılamadı (Lua sözdizimi hatası)', code: input, events, stats };
   const version = picked.version;
   let baseline = picked.run.ok ? snapshotOf(picked.run) : null;
+  // indirmenin davranış denetimi: özgün Luau kodu luau-web runtime'ında, indirilmiş kod Lua'da aynı davranmalı
+  if (luau && baseline) {
+    const lr = await sandbox.run({ code: luau.source, version: 'luau', platform: plat }).catch((e) => ({ ok: false, error: e.message }));
+    luau.verified = Boolean(lr?.ok) && same(baseline, snapshotOf(lr));
+    log(luau.verified ? "Luau indirmesi luau-web runtime'ında doğrulandı"
+      : `Luau indirmesi doğrulanamadı (${lr?.ok ? 'davranış farklı' : lr?.error ?? 'runtime yok'}); sonraki adımlar indirilmiş koda göre denetlenir`,
+    luau.verified ? 'info' : 'warn');
+  }
   log(`Lua ${version}${plat ? ` · platform: ${plat}` : ''}${baseline ? '' : ' (çalıştırılamadı, yalnızca statik dönüşümler)'}`, 'info');
 
   const runs = new Map();
@@ -128,7 +149,7 @@ export async function deobfuscate(input, { sandbox, only = null, onLog = () => {
     // özgün kod üzerinde o platformla yeniden alınır
     const now = ctx.platform ? null : detectPlatform(code);
     if (now) {
-      const rerun = await sandbox.run({ code: input.slice(shebang?.length ?? 0), version, platform: now });
+      const rerun = await sandbox.run({ code: origin, version, platform: now });
       if (rerun.ok) {
         ctx.platform = now;
         baseline = snapshotOf(rerun);
@@ -156,6 +177,7 @@ export async function deobfuscate(input, { sandbox, only = null, onLog = () => {
     version,
     platform: ctx.platform,
     verified: Boolean(baseline),
+    luau: luau ? { lowered: true, verified: luau.verified, goto: luau.goto } : null,
     trace: { first: picked.run, final: baseline ? await runCode(code) : null },
     ms: Date.now() - t0,
   };

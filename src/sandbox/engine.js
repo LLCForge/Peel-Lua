@@ -4,16 +4,33 @@ import { PRELUDE, RUNNER } from './prelude.js';
 
 export const VERSIONS = ['5.1', '5.4', '5.3', '5.2'];
 
-const hexOf = (bstr) => {
+export const hexOf = (bstr) => {
   let s = '';
   for (let i = 0; i < bstr.length; i++) s += (bstr.charCodeAt(i) & 0xff).toString(16).padStart(2, '0');
   return s;
 };
-const unhex = (h) => {
+export const unhex = (h) => {
   let s = '';
   for (let i = 0; i + 1 < h.length; i += 2) s += String.fromCharCode(parseInt(h.slice(i, i + 2), 16));
   return s;
 };
+
+/** RUNNER çıktısı (sekmeyle ayrılmış satırlar) → sonuç nesnesi; Lua ve Luau motorları ortak kullanır */
+export function parseRun(text) {
+  const r = { ok: true, stdout: '', loads: [], fx: [], errors: [], caps: {}, version: '' };
+  for (const line of text.split('\n')) {
+    const [tag, a, b2, c, d] = line.split('\t');
+    // değer yakalama: C k adet tür hex | C k *
+    if (tag === 'C') { r.caps[a] = b2 === '*' ? null : { n: Number(b2), type: c, value: unhex(d ?? '') }; continue; }
+    if (tag === 'L') r.loads.push({ site: Number(a), kind: b2, code: unhex(c ?? '') });
+    else if (tag === 'F') r.fx.push([a, (b2 ?? '').split(',').filter((x) => x !== '' || b2 === '').map(unhex)]);
+    else if (tag === 'O') r.stdout = unhex(a ?? '');
+    else if (tag === 'E') r.errors.push(unhex(a ?? ''));
+    else if (tag === 'V') r.version = a;
+  }
+  if (r.errors.some((e) => e.includes('__peel_timeout'))) r.timedOut = true;
+  return r;
+}
 
 /** @param {(version: string) => Promise<{ lauxlib, lua, lualib }>} loadBindings */
 export function createEngine(loadBindings) {
@@ -53,19 +70,7 @@ export function createEngine(loadBindings) {
       const st = b.lauxlib.luaL_dostring(L, RUNNER);
       const text = b.lua.lua_tostring(L, -1) ?? '';
       if (st !== 0) return { ok: false, error: text, stdout: '', loads: [], fx: [], errors: [text], version };
-      const r = { ok: true, stdout: '', loads: [], fx: [], errors: [], caps: {}, version: '' };
-      for (const line of text.split('\n')) {
-        const [tag, a, b2, c, d] = line.split('\t');
-        // değer yakalama: C k adet tür hex | C k *
-        if (tag === 'C') { r.caps[a] = b2 === '*' ? null : { n: Number(b2), type: c, value: unhex(d ?? '') }; continue; }
-        if (tag === 'L') r.loads.push({ site: Number(a), kind: b2, code: unhex(c ?? '') });
-        else if (tag === 'F') r.fx.push([a, (b2 ?? '').split(',').filter((x) => x !== '' || b2 === '').map(unhex)]);
-        else if (tag === 'O') r.stdout = unhex(a ?? '');
-        else if (tag === 'E') r.errors.push(unhex(a ?? ''));
-        else if (tag === 'V') r.version = a;
-      }
-      if (r.errors.some((e) => e.includes('__peel_timeout'))) r.timedOut = true;
-      return r;
+      return parseRun(text);
     });
   }
 

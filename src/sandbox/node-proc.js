@@ -3,16 +3,19 @@
 // prelude onu Lua tarafında kapatır, izin modeli de işletim sistemi düzeyinde engeller.
 import { createRequire } from 'node:module';
 import { createEngine } from './engine.js';
+import { createLuauEngine } from './luau-engine.js';
 
 const require = createRequire(import.meta.url);
 const FILES = { '5.1': 'lua.51', '5.2': 'lua.52', '5.3': 'lua.53', '5.4': 'lua.54' };
 const loader = async (v) => require(`lua-wasm-bindings/dist/${FILES[v] ?? FILES['5.1']}.js`);
 let engine = createEngine(loader);
+// Luau (luau-web): version 'luau' istekleri
+const luau = createLuauEngine();
 
 process.on('message', async ({ id, ...msg }) => {
   let result;
   try {
-    result = await engine.handle(msg);
+    result = await (msg.version === 'luau' ? luau : engine).handle(msg);
   } catch (err) {
     // wasm tuzağı (ör. memory access out of bounds) modül belleğini bozmuş olabilir: modüller yeniden yüklenir,
     // istemci isteği bir kez tekrarlar

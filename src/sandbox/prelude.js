@@ -10,6 +10,8 @@
 // - Belirlenimlilik: sabit saat, tohumlu rastgelelik; komut sayısı bütçesi aşılırsa program durdurulur.
 
 export const PRELUDE = String.raw`
+-- Luau'da io kütüphanesi yoktur (prelude'un io kancaları boş tabloya kurulur)
+if io == nil then io = {} end
 local __real = {
   load = load, loadstring = loadstring, dofile = dofile, loadfile = loadfile, require = require,
   setmetatable = setmetatable, getmetatable = getmetatable, type = type, tostring = tostring, pairs = pairs,

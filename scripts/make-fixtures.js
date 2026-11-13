@@ -224,5 +224,36 @@ for _0x1a = 1, 2 do
 end
 `;
 
+// Luau sözdizimi: tipler, +=, continue, enterpolasyon, if ifadesi; indirilip luau-web'de doğrulanır, katman açılır
+fx['luau-syntax'] = `-- LUAU: verified
+-- EXPECT: print("layer")
+-- EXPECT: count = count + i
+-- GONE: loadstring
+-- GONE: then continue
+type Pair = { key: string, n: number }
+local function label(p: Pair): string
+  return \`{p.key}:{p.n}\`
+end
+local count: number = 0
+for i = 1, 4 do
+  if i == 2 then continue end
+  count += i
+end
+local size = if count > 5 then "big" else "small"
+loadstring("print('" .. "layer" .. "')")()
+print(label({ key = "luau", n = count }), size, 0b11, 1_000)
+`;
+
+// Luau Roblox yükleyicisi: dış girdiyle yüklenen kod açılmaz
+fx['luau-roblox-keep'] = `-- LUAU: verified
+-- KEEP: HttpGet
+-- KEEP: loadstring(
+local url: string = "${URL_}"
+local body: string = game:HttpGet(url)
+local fn = loadstring(body)
+if fn then fn() end
+print(\`loaded {#body}\`)
+`;
+
 for (const [name, src] of Object.entries(fx)) writeFileSync(new URL(`${name}.lua.x`, dir), encodeFixture(Buffer.from(src)));
 console.log(`${Object.keys(fx).length} fixture yazıldı`);
