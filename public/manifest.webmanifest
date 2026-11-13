@@ -1,0 +1,20 @@
+{
+  "name": "PEEL · Lua Deobfuscator",
+  "short_name": "PEEL Lua",
+  "description": "Open-source Lua deobfuscator that runs entirely in your browser. Works offline; your code never leaves your device.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b0b12",
+  "theme_color": "#0b0b12",
+  "categories": ["developer", "security", "utilities"],
+  "icons": [
+    { "src": "peel-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "peel-icon-1024.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" },
+    { "src": "peel-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "file_handlers": [
+    { "action": "./", "accept": { "text/x-lua": [".lua", ".luau"] } }
+  ]
+}
