@@ -11,8 +11,16 @@
 //   bytecode:   [{ size, version }]   kaynağa çevrilemeyen ikili chunk'lar (string.dump / luac)
 //   summary:    string
 // }
+// Ek alanlar: detection[].kind 'technique'; threat.classes[].weight; iocs.downloads (paste/raw barındırma
+// adresleri), iocs.benign (platform/belge alanları); lang.
 // Dizgeler (input, output, fx argümanları) bstr'dir: her karakter bir bayt.
 import { toText } from './bstr.js';
+import { sourcesOf } from '../report/text.js';
+import { detect } from '../report/detect.js';
+import { protection as findProtection } from '../report/protection.js';
+import { threat as assessThreat } from '../report/threat.js';
+import { iocs as findIocs } from '../report/iocs.js';
+import { summarize } from '../report/summary.js';
 
 const NET = /^(game\.Http(Get|Post)(Async)?|HttpGet|HttpPost|request|http_request|syn\.request|http\.(request|Fetch|Post)|HTTP|PerformHttpRequest|socket\.|fluxus\.request)/;
 const CMD = /^(os\.execute|io\.popen)$/;
@@ -34,13 +42,18 @@ export function behaviourOf(fx = [], loads = []) {
 
 /** @param {{ input: string, output: string, trace?: { first?: object, final?: object }, events?: object[], stats?: object, version?: string, platform?: string|null, lang?: 'tr'|'en' }} o */
 export function analyze({ input, output, trace = {}, events = [], stats = {}, version = null, platform = null, lang = 'tr' }) {
+  lang = lang === 'en' ? 'en' : 'tr';
   const first = trace?.first ?? {};
-  return {
-    detection: [],
-    protection: null,
-    threat: { score: 0, level: 'none', classes: [] },
-    behaviour: behaviourOf(first.fx, first.loads),
-    iocs: { urls: [], domains: [], ips: [], emails: [], discordWebhooks: [], telegram: [] },
+  const fx = first.fx ?? [];
+  const loads = first.loads ?? [];
+  const behaviour = behaviourOf(fx, loads);
+  const sources = sourcesOf({ input, output, trace });
+  const report = {
+    detection: detect(sources, loads, lang),
+    protection: findProtection(sources.filter((s) => s.where !== 'output').map((s) => s.text).join('\n'), lang),
+    threat: assessThreat(sources, behaviour, fx, lang),
+    behaviour,
+    iocs: findIocs([...sources.map((s) => s.text), ...fx.flatMap(([, args = []]) => args.map(txt))], behaviour.network.map((n) => n.target)),
     metrics: {
       inBytes: input.length,
       outBytes: output.length,
@@ -50,8 +63,10 @@ export function analyze({ input, output, trace = {}, events = [], stats = {}, ve
       version,
       platform,
     },
-    bytecode: (first.loads ?? []).filter((l) => l.code.startsWith('\x1bLua')).map((l) => ({ size: l.code.length, version: (l.code.charCodeAt(4) >> 4) + '.' + (l.code.charCodeAt(4) & 15) })),
-    lang: lang === 'en' ? 'en' : 'tr',
+    bytecode: [{ code: input }, ...loads].filter((l) => l.code.startsWith('\x1bLua')).map((l) => ({ size: l.code.length, version: (l.code.charCodeAt(4) >> 4) + '.' + (l.code.charCodeAt(4) & 15) })),
+    lang,
     summary: '',
   };
+  report.summary = summarize(report, lang);
+  return report;
 }
