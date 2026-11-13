@@ -210,5 +210,19 @@ return (function(...)
 end)(...)
 `;
 
+// anlamsız local adları türetilen adlarla değişir; küresel ad olduğu gibi kalır
+fx['rename'] = `-- EXPECT: for i = 1, 2 do
+-- EXPECT: local function fn(arg)
+-- GONE: IlIlIlIl
+-- GONE: l_0_
+-- KEEP: lIlIlI = true
+lIlIlI = true
+local l_0_ = { "renamed" }
+local function IlIlIlIl(IIlIlI) return IIlIlI .. "!" end
+for _0x1a = 1, 2 do
+  print(IlIlIlIl(l_0_[_0x1a] or "x"), _0x1a, lIlIlI)
+end
+`;
+
 for (const [name, src] of Object.entries(fx)) writeFileSync(new URL(`${name}.lua.x`, dir), encodeFixture(Buffer.from(src)));
 console.log(`${Object.keys(fx).length} fixture yazıldı`);

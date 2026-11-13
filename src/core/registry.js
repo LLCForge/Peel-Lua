@@ -7,5 +7,6 @@ import * as propagate from '../passes/propagate.js';
 import * as strings from '../passes/strings.js';
 import * as dead from '../passes/dead.js';
 import * as unused from '../passes/unused.js';
+import * as rename from '../passes/rename.js';
 
-export const PASSES = [layers, iife, proxify, propagate, fold, strings, dead, unused];
+export const PASSES = [layers, iife, proxify, propagate, fold, strings, dead, unused, rename];
