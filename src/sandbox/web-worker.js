@@ -81,7 +81,9 @@ const loadAll = () => (loading ??= (async () => {
 
 const engine = createEngine(async (version) => {
   const all = await loadAll();
-  const a = all.get(version) ?? all.get('5.1');
+  const a = all.get(version);
+  // Luau runtime'ı (luau-web) yalnızca Node'da: bilinmeyen sürüm başka bir Lua'da çalıştırılmaz
+  if (!a) throw new Error(`bu tarayıcı sandbox'ında ${version} çalışma ortamı yok`);
   // derleme senkron (Emscripten WASM_ASYNC_COMPILATION=0); worker'da boyut sınırı yoktur
   const glue = a.factory({ wasmBinary: a.wasmBinary, print: quiet, printErr: quiet });
   const lua = createLua(glue, a.semver);
