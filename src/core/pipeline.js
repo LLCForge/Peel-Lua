@@ -72,7 +72,7 @@ export async function deobfuscate(input, { sandbox, only = null, onLog = () => {
   // Luau sayıları tek türlüdür (float): tam sayı/float ayrımı olmayan 5.1/5.2 önce denenir
   const picked = await pickVersion(sandbox, code, plat, log, luau ? ['5.1', '5.2', '5.3', '5.4'].filter((v) => sandbox.versions.includes(v)) : sandbox.versions);
   if (!picked) return { error: 'Kod ayrıştırılamadı (Lua sözdizimi hatası)', code: input, events, stats };
-  const version = picked.version;
+  let version = picked.version;
   let baseline = picked.run.ok ? snapshotOf(picked.run) : null;
   // indirmenin davranış denetimi: özgün Luau kodu luau-web runtime'ında, indirilmiş kod Lua'da aynı davranmalı
   if (luau && baseline) {
@@ -85,11 +85,11 @@ export async function deobfuscate(input, { sandbox, only = null, onLog = () => {
   log(`Lua ${version}${plat ? ` · platform: ${plat}` : ''}${baseline ? '' : ' (çalıştırılamadı, yalnızca statik dönüşümler)'}`, 'info');
 
   const runs = new Map();
-  const runCode = async (c, variant = 0) => {
-    const key = variant ? `\u0001${variant}${c}` : c;
+  const runCode = async (c, variant = 0, ver = version) => {
+    const key = `${ver}\u0001${variant}\u0001${c}`;
     if (!runs.has(key)) {
       if (runs.size > 64) runs.delete(runs.keys().next().value);
-      runs.set(key, await sandbox.run({ code: c, version, platform: ctx.platform, variant }));
+      runs.set(key, await sandbox.run({ code: c, version: ver, platform: ctx.platform, variant }));
     }
     return runs.get(key);
   };
@@ -101,6 +101,10 @@ export async function deobfuscate(input, { sandbox, only = null, onLog = () => {
     bump: (k, n = 1) => { if (n) stats[k] = (stats[k] ?? 0) + n; },
     runRaw: async (c, variant = 0) => (baseline ? runCode(c, variant) : null),
     evaluate: (exprs) => sandbox.evaluate({ exprs, version }),
+    // pass çıktısı daha yeni bir Lua sürümü gerektiriyorsa (ör. goto: 5.2): çıktı o sürümde ayrıştırılıp doğrulanır,
+    // kabul edilirse hat o sürümle devam eder
+    pendingVersion: null,
+    switchVersion: (v) => { ctx.pendingVersion = v; },
   };
 
   const passes = PASSES.filter((p) => (!only || only.includes(p.id)) && (!p.needsSandbox || baseline));
@@ -112,9 +116,12 @@ export async function deobfuscate(input, { sandbox, only = null, onLog = () => {
       const t = Date.now();
       onPass(p.id, 'run');
       let next;
+      let ver = version;
+      ctx.pendingVersion = null;
       try {
         next = await p.run(code, ctx);
-        if (next != null && next !== code) next = fixSemicolons(next, version);
+        ver = ctx.pendingVersion ?? version;
+        if (next != null && next !== code) next = fixSemicolons(next, ver);
       } catch (e) {
         log(`${p.id}: ${e.message}, geri alındı`, 'warn');
         events.push({ id: p.id, round, state: 'fail', reason: e.message, ms: Date.now() - t });
@@ -127,13 +134,13 @@ export async function deobfuscate(input, { sandbox, only = null, onLog = () => {
         onPass(p.id, 'skip');
         continue;
       }
-      if (!tryParse(next, version)) {
+      if (!tryParse(next, ver)) {
         log(`${p.id}: çıktı ayrıştırılamadı, geri alındı`, 'warn');
         events.push({ id: p.id, round, state: 'fail', reason: 'parse', ms: Date.now() - t });
         onPass(p.id, 'fail');
         continue;
       }
-      if (baseline && !same(baseline, snapshotOf(await runCode(next)))) {
+      if (baseline && !same(baseline, snapshotOf(await runCode(next, 0, ver)))) {
         log(`${p.id}: davranış değişti, geri alındı`, 'warn');
         events.push({ id: p.id, round, state: 'fail', reason: 'davranış', ms: Date.now() - t });
         onPass(p.id, 'fail');
@@ -141,6 +148,11 @@ export async function deobfuscate(input, { sandbox, only = null, onLog = () => {
       }
       code = next;
       changed = true;
+      if (ver !== version) {
+        log(`${p.id}: hat Lua ${ver} ile devam ediyor`, 'info');
+        version = ver;
+        ctx.version = ver;
+      }
       events.push({ id: p.id, round, state: 'ok', ms: Date.now() - t });
       onPass(p.id, 'ok');
       onSnapshot({ id: p.id, round, code });

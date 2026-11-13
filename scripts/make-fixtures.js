@@ -1,8 +1,8 @@
 // Temel teknik fixture'larını üretir: node scripts/make-fixtures.js
 // Fixture'lar diske XOR + base64 (.lua.x) olarak yazılır ve yalnızca bellekte çözülür (test/fixture-codec.js): zararlı
 // koda benzeyen test örnekleri (arka kapı, uzaktan yükleme) antivirüsü tetiklemesin. Şüpheli dizgeler betikte parçalı yazılır.
-import { writeFileSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
-import { encodeFixture } from '../test/fixture-codec.js';
+import { writeFileSync, mkdirSync, readdirSync, rmSync, readFileSync } from 'node:fs';
+import { encodeFixture, decodeFixture } from '../test/fixture-codec.js';
 
 const dir = new URL('../test/fixtures/', import.meta.url);
 mkdirSync(dir, { recursive: true });
@@ -253,6 +253,14 @@ local body: string = game:HttpGet(url)
 local fn = loadstring(body)
 if fn then fn() end
 print(\`loaded {#body}\`)
+`;
+
+// Prometheus Vmify çıktısı (benchmark örneğinden): VM dağıtıcısı kalkmalı, dizgeler ve çağrılar görünmeli
+const vmSample = decodeFixture(readFileSync(new URL('../test/bench/prom-vmify--mini.lua.x', import.meta.url), 'utf8')).toString('latin1');
+fx['vm-prometheus'] = `-- EXPECT: "Hello"
+-- EXPECT: "Grace"
+-- GONE: unknown VM opcode
+${vmSample}
 `;
 
 for (const [name, src] of Object.entries(fx)) writeFileSync(new URL(`${name}.lua.x`, dir), encodeFixture(Buffer.from(src)));
