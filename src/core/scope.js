@@ -42,7 +42,7 @@ export function analyze(ast) {
       case 'StringCallExpression': expr(n.base); expr(n.argument); return;
       case 'TableCallExpression': expr(n.base); expr(n.arguments); return;
       case 'TableConstructorExpression':
-        for (const f of n.fields) { if (f.key) expr(f.key); expr(f.value); }
+        for (const f of n.fields) { if (f.type === 'TableKey') expr(f.key); expr(f.value); } // {a = 1}: a alan adıdır, okuma değil
         return;
       case 'BinaryExpression': case 'LogicalExpression': expr(n.left); expr(n.right); return;
       case 'UnaryExpression': expr(n.argument); return;
@@ -115,6 +115,20 @@ export function analyze(ast) {
 
   ast.body.forEach(stmt);
   return { decls, globals, dynamic };
+}
+
+/** analyze + düğüm eşlemeleri: declOf (Identifier düğümü → bildirim), globalOf (Identifier düğümü → küresel ad) */
+export function bind(ast) {
+  const a = analyze(ast);
+  const declOf = new Map();
+  const globalOf = new Map();
+  for (const d of a.decls) {
+    declOf.set(d.id, d);
+    for (const r of d.reads) declOf.set(r, d);
+    for (const w of d.writes) declOf.set(w, d);
+  }
+  for (const [name, g] of a.globals) for (const n of [...g.reads, ...g.writes]) globalOf.set(n, name);
+  return { ...a, declOf, globalOf };
 }
 
 /** Kod içinde serbest (küresel) olarak kullanılan adlar */

@@ -55,6 +55,14 @@ try {
   const after = await sb.run({ code: 'print(1 + 1)' });
   assert.equal(after.stdout, '2\n');
 
+  // değer yakalama: değerler geçer, sabit site kaydedilir, değişen '*' olur; varyant 2'de saat farklıdır
+  const cap = await sb.run({ code: "for i = 1, 2 do print(__peel_cap(1, 'k'), __peel_cap(2, i)) end\nprint(__peel_cap(3, os.time()))" });
+  assert.equal(cap.stdout, 'k\t1\nk\t2\n1704067200\n');
+  assert.deepEqual(cap.caps[1], { n: 1, type: 'string', value: 'k' });
+  assert.equal(cap.caps[2], null);
+  const cap2 = await sb.run({ code: 'print(__peel_cap(3, os.time()))', variant: 2 });
+  assert.notEqual(cap2.caps[3].value, cap.caps[3].value);
+
   // sürümler ve değerlendirme
   assert.equal((await sb.run({ code: 'print(7 // 2)', version: '5.4' })).stdout, '3\n');
   const ev = await sb.evaluate({ exprs: ['string.char(104, 105)', '("ab"):rep(2)', 'nope()'] });

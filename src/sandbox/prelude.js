@@ -17,11 +17,14 @@ local __real = {
   sbyte = string.byte, schar = string.char, sgsub = string.gsub, ssub = string.sub, tconcat = table.concat,
   unpack = unpack or table.unpack, getenv = os.getenv, ioopen = io.open,
 }
-local P = { loads = {}, fx = {}, out = {}, outlen = 0, errors = {}, obs = {} }
+local P = { loads = {}, fx = {}, out = {}, outlen = 0, errors = {}, obs = {}, caps = {}, capn = 0 }
 -- dış girdi sondası: varyant 1'de dışarıdan gelen her değer (HTTP yanıtı, dosya, ortam) farklıdır. İki çalıştırmada
 -- farklı kod yükleyen site dış girdiye bağlıdır ve açılmaz (uzaktan kod yükleyen satır silinmesin).
+-- Varyant 2 ayrıca belirlenimsizlik kaynaklarını (saat, rastgelelik) değiştirir: değer yakalama (__peel_cap) buna
+-- bağlı değerleri literale dondurmasın.
 local V = __peel_variant or 0
-local EXT = V == 1 and '-- peel dis girdi' or ''
+local EXT = V >= 1 and '-- peel dis girdi' or ''
+local T0 = V == 2 and 1893456000 or 1704067200
 __peel_state = P
 
 local function hex(s)
@@ -107,18 +110,39 @@ os.execute = function(cmd) fx('os.execute', cmd) return 0 end
 io.popen = function(cmd) fx('io.popen', cmd) return nil, 'sandbox: komut kapalı' end
 os.remove = function(f) fx('os.remove', f) return true end
 os.rename = function(a, b) fx('os.rename', a, b) return true end
-os.getenv = function(k) fx('os.getenv', k) if V == 1 then return EXT end return nil end
+os.getenv = function(k) fx('os.getenv', k) if V >= 1 then return EXT end return nil end
 os.exit = function(code) fx('os.exit', code) __real.error('__peel_exit', 0) end
 io.open = function(f, mode)
   if mode and (mode:find('w') or mode:find('a') or mode:find('+')) then fx('io.open', f, mode) end
   return __real.ioopen(f, mode)
 end
-os.time = function(t) if t then return 1704067200 end return 1704067200 end
-os.clock = function() return 0 end
+os.time = function(t) return T0 end
+os.clock = function() return V == 2 and 7 or 0 end
 local real_date = os.date
-os.date = function(f, t) return real_date(f, t or 1704067200) end
-math.randomseed(1)
+os.date = function(f, t) return real_date(f, t or T0) end
+math.randomseed(V == 2 and 977 or 1)
 math.randomseed = function() end
+
+-- değer yakalama: __peel_cap(k, ...) değerleri olduğu gibi geçirir; her sitenin ilk değeri (tür, değer, adet) kaydedilir,
+-- site farklı bir değer üretirse '*' olur
+local function capkey(...)
+  local n = __real.select('#', ...)
+  local v = ...
+  local t = __real.type(v)
+  if t ~= 'string' and t ~= 'number' and t ~= 'boolean' and t ~= 'nil' then return nil end
+  local s = t == 'number' and __real.sfmt('%.17g', v) or __real.tostring(v)
+  if t == 'number' and math.type and math.type(v) == 'integer' then t = 'integer' end
+  if t == 'string' and #v > 1000000 then return nil end
+  return n .. '\t' .. t .. '\t' .. hex(s)
+end
+function __peel_cap(k, ...)
+  local c = P.caps[k]
+  if c ~= '*' then
+    local key = capkey(...)
+    if key == nil or (c ~= nil and c ~= key) then P.caps[k] = '*' elseif c == nil then P.caps[k] = key end
+  end
+  return ...
+end
 
 -- platform taklitleri: her erişim bir yol, her çağrı bir kayıt
 local FAKE = {}
@@ -203,6 +227,7 @@ function __peel_finish()
   for _, l in __real.pairs(P.fx) do lines[#lines + 1] = 'F\t' .. l end
   lines[#lines + 1] = 'O\t' .. hex(__real.tconcat(P.out))
   for _, e in __real.pairs(P.errors) do lines[#lines + 1] = 'E\t' .. hex(e) end
+  for k, c in __real.pairs(P.caps) do lines[#lines + 1] = 'C\t' .. k .. '\t' .. c end
   lines[#lines + 1] = 'V\t' .. _VERSION
   return __real.tconcat(lines, '\n')
 end

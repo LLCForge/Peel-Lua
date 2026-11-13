@@ -65,7 +65,7 @@ export async function deobfuscate(input, { sandbox, only = null, onLog = () => {
 
   const runs = new Map();
   const runCode = async (c, variant = 0) => {
-    const key = variant ? `\u0001${c}` : c;
+    const key = variant ? `\u0001${variant}${c}` : c;
     if (!runs.has(key)) {
       if (runs.size > 64) runs.delete(runs.keys().next().value);
       runs.set(key, await sandbox.run({ code: c, version, platform: ctx.platform, variant }));

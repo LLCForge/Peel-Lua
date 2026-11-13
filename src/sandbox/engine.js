@@ -47,15 +47,17 @@ export function createEngine(loadBindings) {
   async function run({ code, version = '5.1', platform = null, variant = 0 }) {
     return withState(version, (b, L) => {
       doString(b, L, `__peel_src_hex = "${hexOf(code)}"`);
-      if (variant) doString(b, L, '__peel_variant = 1');
+      if (variant) doString(b, L, `__peel_variant = ${Number(variant) | 0}`);
       if (platform) doString(b, L, `__peel_platform_kind = "${String(platform).replace(/[^a-z]/g, '')}"`);
       doString(b, L, PRELUDE);
       const st = b.lauxlib.luaL_dostring(L, RUNNER);
       const text = b.lua.lua_tostring(L, -1) ?? '';
       if (st !== 0) return { ok: false, error: text, stdout: '', loads: [], fx: [], errors: [text], version };
-      const r = { ok: true, stdout: '', loads: [], fx: [], errors: [], version: '' };
+      const r = { ok: true, stdout: '', loads: [], fx: [], errors: [], caps: {}, version: '' };
       for (const line of text.split('\n')) {
-        const [tag, a, b2, c] = line.split('\t');
+        const [tag, a, b2, c, d] = line.split('\t');
+        // değer yakalama: C k adet tür hex | C k *
+        if (tag === 'C') { r.caps[a] = b2 === '*' ? null : { n: Number(b2), type: c, value: unhex(d ?? '') }; continue; }
         if (tag === 'L') r.loads.push({ site: Number(a), kind: b2, code: unhex(c ?? '') });
         else if (tag === 'F') r.fx.push([a, (b2 ?? '').split(',').filter((x) => x !== '' || b2 === '').map(unhex)]);
         else if (tag === 'O') r.stdout = unhex(a ?? '');
