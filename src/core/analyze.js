@@ -22,7 +22,7 @@ import { threat as assessThreat } from '../report/threat.js';
 import { iocs as findIocs } from '../report/iocs.js';
 import { summarize } from '../report/summary.js';
 
-const NET = /^(game\.Http(Get|Post)(Async)?|HttpGet|HttpPost|request|http_request|syn\.request|http\.(request|Fetch|Post)|HTTP|PerformHttpRequest|socket\.|fluxus\.request)/;
+const NET = /^(game\.Http(Get|Post)(Async)?|HttpGet|HttpPost|request|http_request|syn\.request|http\.(request|Fetch|Post)|HTTP|PerformHttpRequest|socket\.|fluxus\.request)|\.(GetAsync|PostAsync|RequestAsync|HttpGet|HttpPost|HttpGetAsync|HttpPostAsync)$/;
 const CMD = /^(os\.execute|io\.popen)$/;
 const FILE = /^(io\.open|os\.(remove|rename)|writefile|readfile|appendfile|delfile|makefolder|SaveResourceFile|LoadResourceFile|file\.(Write|Append|Read|Delete)|dofile|loadfile)$/;
 
