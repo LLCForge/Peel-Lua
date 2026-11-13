@@ -212,7 +212,7 @@ end)(...)
 
 // anlamsız local adları türetilen adlarla değişir; küresel ad olduğu gibi kalır
 fx['rename'] = `-- EXPECT: for i = 1, 2 do
--- EXPECT: local function fn(arg)
+-- EXPECT: local function fn(param)
 -- GONE: IlIlIlIl
 -- GONE: l_0_
 -- KEEP: lIlIlI = true

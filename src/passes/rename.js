@@ -10,7 +10,9 @@ import { bind } from '../core/scope.js';
 export const id = 'rename';
 
 const KEYWORDS = new Set(['and', 'break', 'do', 'else', 'elseif', 'end', 'false', 'for', 'function', 'goto', 'if', 'in', 'local',
-  'nil', 'not', 'or', 'repeat', 'return', 'then', 'true', 'until', 'while', 'continue', 'type', 'export']);
+  'nil', 'not', 'or', 'repeat', 'return', 'then', 'true', 'until', 'while', 'continue', 'type', 'export',
+  // 5.1'de vararg fonksiyon gizli 'arg' local'i bildirir: aynı adlı parametreyi gölgeler
+  'arg', 'self', '_ENV', '_G']);
 const COMMON = new Set(['id', 'ok', 'fn', 'cb', 'ip', 'db', 'ui', 'dx', 'dy', 'op', 'el', 'ex', 'to', 'at']);
 const SHORT_OK = new Set(['i', 'j', 'k', 'v', 'x', 'y', 'z', 'n', 's', 't', '_']);
 
@@ -131,7 +133,7 @@ export async function run(code, ctx) {
         name = idx === 0 ? (fn === 'ipairs' ? 'i' : 'k') : idx === 1 ? 'v' : `v${idx}`;
       }
     } else if (d.kind === 'localfunction') name = decodes(d.init) ? 'decode' : 'fn';
-    else if (d.kind === 'param') name = 'arg';
+    else if (d.kind === 'param') name = 'param';
     else name = fromInit(d.init) ?? fromUse(d);
     if (!name) {
       if (!bad) continue;
@@ -139,7 +141,7 @@ export async function run(code, ctx) {
     }
     if (name === d.name) continue;
     // tek harfli geleneksel ad yalnızca anlamlı bir türetmeyle değişir (i → i değil, x → tbl)
-    if (!bad && ['var', 'arg', 'num', 'i', 'j', 'k', 'v'].includes(name)) continue;
+    if (!bad && ['var', 'param', 'num', 'i', 'j', 'k', 'v'].includes(name)) continue;
     const next = fresh(name, scopeOf(d));
     for (const n of [d.id, ...d.reads, ...d.writes]) if (n.range) edits.push({ start: n.range[0], end: n.range[1], text: next });
     count++;

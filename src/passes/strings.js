@@ -21,7 +21,9 @@ const MAX_LITERAL = 1_000_000;
 
 const inside = (n, r) => Boolean(n.range) && n.range[0] >= r[0] && n.range[1] <= r[1];
 const isConstArg = (a) => ['StringLiteral', 'NumericLiteral', 'BooleanLiteral', 'NilLiteral'].includes(a.type)
-  || (a.type === 'UnaryExpression' && a.operator === '-' && a.argument.type === 'NumericLiteral');
+  || (a.type === 'UnaryExpression' && a.operator === '-' && a.argument.type === 'NumericLiteral')
+  // Prometheus SplitStrings: f({2, 1, {"ex", "__ind"}}) — her çağrıda taze, yalnızca sabitlerden tablo
+  || (a.type === 'TableConstructorExpression' && a.fields.every((f) => f.type === 'TableValue' && isConstArg(f.value)));
 
 export async function run(code, ctx) {
   const ast = tryParse(code, ctx.version);
