@@ -18,6 +18,18 @@ export async function run(code, ctx) {
   const ast = tryParse(code, ctx.version);
   if (!ast) return code;
   const edits = [];
+  // tüm dosya tek sarmalayıcıysa (Prometheus WrapInFunction): return (function(...) KOD end)(...) → KOD
+  // Gövdenin return'leri chunk'tan döner, ... chunk'ın argümanlarıdır: eşdeğer.
+  const only = ast.body.length === 1 ? ast.body[0] : null;
+  const call = only?.type === 'ReturnStatement' && only.arguments.length === 1 ? only.arguments[0] : null;
+  const fn = call?.type === 'CallExpression' ? call.base : null;
+  if (fn?.type === 'FunctionDeclaration' && !fn.identifier && fn.parameters.every((p) => p.type === 'VarargLiteral')
+    && call.arguments.every((a) => a.type === 'VarargLiteral') && call.arguments.length <= 1 && fn.body.length
+    && (!fn.parameters.length || call.arguments.length === 1)) {
+    ctx.log('iife: dosya sarmalayıcısı açıldı', 'info');
+    ctx.bump('iife');
+    return code.slice(0, only.range[0]) + code.slice(fn.body[0].range[0], fn.body.at(-1).range[1]) + code.slice(only.range[1]);
+  }
   const cont = continuedStarts(ast);
   walk(ast, (n) => {
     // üst düzeyinde local bildirimi olmayan do bloğunun kapsam etkisi yoktur: açılır

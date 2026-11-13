@@ -28,7 +28,7 @@ export function analyze(ast) {
     if (d) { d[mode].push(id); return; }
     if (!globals.has(id.name)) globals.set(id.name, { reads: [], writes: [] });
     globals.get(id.name)[mode].push(id);
-    if (['getfenv', 'setfenv', '_G', '_ENV', 'debug', 'rawset', 'rawget'].includes(id.name)) dynamic = true;
+    if (['getfenv', 'setfenv', '_G', '_ENV', 'debug'].includes(id.name)) dynamic = true;
   };
 
   function expr(n) {

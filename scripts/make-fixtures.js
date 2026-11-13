@@ -188,5 +188,27 @@ end
 print(dec("${[...'secret'].map((c) => String.fromCharCode(c.charCodeAt(0) + 3)).join('')}"))
 `;
 
+// metatable vekilli local'ler (Prometheus ProxifyLocals biçimi) ve dosya sarmalayıcısı (WrapInFunction)
+fx['proxify-locals'] = `-- EXPECT: x = x + i
+-- EXPECT: print("total", x)
+-- GONE: setmetatable
+local E = function() end
+local x = setmetatable({ v = 1 }, { __mul = function(t, v) t.v = v end, __sub = function(t, k) return t.v end })
+local name = setmetatable({ w = "proxy" }, { __concat = function(t, k) return rawget(t, "w") end, __index = function(t, v) t.w = v end })
+for i = 1, 3 do
+  E(x * ((x - "a") + i))
+end
+print("total", x - "b")
+print(name .. "q")
+`;
+
+fx['wrap-function'] = `-- EXPECT: print("wrapped", select("#", ...))
+-- GONE: function(...)
+return (function(...)
+  local a = "wrapped"
+  print(a, select("#", ...))
+end)(...)
+`;
+
 for (const [name, src] of Object.entries(fx)) writeFileSync(new URL(`${name}.lua.x`, dir), encodeFixture(Buffer.from(src)));
 console.log(`${Object.keys(fx).length} fixture yazıldı`);
