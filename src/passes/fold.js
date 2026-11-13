@@ -1,7 +1,7 @@
 // Sabit katlama: yalnızca literallerden, işleçlerden ve saf kütüphane çağrılarından oluşan ifadeler sandbox'taki gerçek
 // Lua ile hesaplanıp literal yazılır: string.char(104,105), ("ab"):rep(2), "a".."b", table.concat({...}), "\104\105".
 // Kütüphane adı (string, table, math...) dosyada local ya da küresel olarak yeniden bağlanıyorsa o kütüphaneye dokunulmaz.
-import { tryParse, walk, span, applyEdits, luaLiteral } from '../core/lua.js';
+import { tryParse, walk, span, applyEdits, luaLiteral, pad } from '../core/lua.js';
 import { analyze } from '../core/scope.js';
 
 export const id = 'fold';
@@ -58,6 +58,8 @@ export async function run(code, ctx) {
     if (!isConst(n)) return true;
     if (n.type === 'TableConstructorExpression' || n.type === 'MemberExpression') return true;
     if (isLit(n) && plain(n)) return false;
+    // -5 zaten literal yazımıdır (yeniden yazılırsa her turda (-5) → ((-5)) büyür)
+    if (n.type === 'UnaryExpression' && n.operator === '-' && n.argument.type === 'NumericLiteral' && /^\d+(\.\d+)?$/.test(n.argument.raw)) return false;
     // atama hedefleri ve local adları ifade değildir
     if (key === 'variables' || key === 'identifier') return false;
     targets.push(n);
@@ -73,7 +75,7 @@ export async function run(code, ctx) {
     const lit = luaLiteral(type, value);
     if (lit === null) return;
     const [start, end] = span(n);
-    if (code.slice(start, end) !== lit) edits.push({ start, end, text: lit });
+    if (code.slice(start, end) !== lit) edits.push({ start, end, text: pad(code, start, end, lit) });
   });
   if (!edits.length) return code;
   const r = applyEdits(code, edits);

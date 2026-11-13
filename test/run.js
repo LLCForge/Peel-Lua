@@ -6,6 +6,7 @@
 //   -- EXPECT: print('hi')   çıktıda bulunmalı (boşluklar normalize edilir)
 //   -- GONE: loadstring      çıktıda bulunmamalı
 //   -- KEEP: HttpGet         çıktıda kalmalı (güvenlik: dış etki ve girdiye bağlı kod silinmemeli)
+//   -- LUAU: verified        Luau indirmesi luau-web runtime'ında doğrulanmalı
 import { readdirSync, readFileSync } from 'node:fs';
 import { createNodeSandbox } from '../src/sandbox/node-host.js';
 import { deobfuscate } from '../src/core/pipeline.js';
@@ -16,7 +17,7 @@ const dir = new URL('./fixtures/', import.meta.url);
 const filter = process.argv[2];
 const files = readdirSync(dir).filter((f) => f.endsWith('.lua.x') && (!filter || f.includes(filter))).sort();
 
-const DIRECTIVE = /^\s*--\s*(EXPECT|GONE|KEEP):\s*(.+)$/gm;
+const DIRECTIVE = /^\s*--\s*(EXPECT|GONE|KEEP|LUAU):\s*(.+)$/gm;
 const directives = (src, key) => [...src.matchAll(DIRECTIVE)].filter((m) => m[1] === key).map((m) => m[2].trim());
 const norm = (s) => s.replace(DIRECTIVE, '').replace(/\s+/g, ' ').trim();
 
@@ -36,6 +37,8 @@ try {
     for (const e of directives(src, 'EXPECT')) if (!out.includes(norm(e))) fails.push(`EXPECT yok: ${e}`);
     for (const g of directives(src, 'GONE')) if (out.includes(norm(g))) fails.push(`GONE duruyor: ${g}`);
     for (const k of directives(src, 'KEEP')) if (!out.includes(norm(k))) fails.push(`KEEP silinmiş: ${k}`);
+    // LUAU: verified → Luau indirmesi luau-web runtime'ında özgün kodla aynı davranmalı
+    if (directives(src, 'LUAU').includes('verified') && !r.luau?.verified) fails.push('Luau indirmesi doğrulanmadı');
     if (!fails.length) pass++;
     console.log(`${fails.length ? 'FAIL' : 'ok  '} ${f} (${r.ms ?? 0} ms)${fails.length ? `\n     ${fails.join('\n     ')}` : ''}`);
     if (filter || fails.length) {

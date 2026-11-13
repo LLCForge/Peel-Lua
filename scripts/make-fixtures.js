@@ -1,8 +1,8 @@
 // Temel teknik fixture'larını üretir: node scripts/make-fixtures.js
 // Fixture'lar diske XOR + base64 (.lua.x) olarak yazılır ve yalnızca bellekte çözülür (test/fixture-codec.js): zararlı
 // koda benzeyen test örnekleri (arka kapı, uzaktan yükleme) antivirüsü tetiklemesin. Şüpheli dizgeler betikte parçalı yazılır.
-import { writeFileSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
-import { encodeFixture } from '../test/fixture-codec.js';
+import { writeFileSync, mkdirSync, readdirSync, rmSync, readFileSync } from 'node:fs';
+import { encodeFixture, decodeFixture } from '../test/fixture-codec.js';
 
 const dir = new URL('../test/fixtures/', import.meta.url);
 mkdirSync(dir, { recursive: true });
@@ -127,6 +127,140 @@ fx['shebang'] = `#!/usr/bin/env lua
 -- EXPECT: print("sb")
 -- GONE: loadstring
 loadstring("print('sb')")()
+`;
+
+// özel durumlu dizge çözücü (Prometheus EncryptStrings biçimi): önbellek tablosu + anahtarlı XOR
+const xorEnc = (s, k) => [...Buffer.from(s)].map((c, i) => `\\${(c ^ ((k + i * 7) % 256)) & 255}`).join('');
+fx['string-decoder'] = `-- EXPECT: print("Hello, decoder")
+-- EXPECT: print("peel")
+-- GONE: decode(
+local decode, cache
+do
+  local byte, char, concat = string.byte, string.char, table.concat
+  local store = {}
+  cache = setmetatable({}, { __index = store })
+  function decode(s, key)
+    if store[key] then return key end
+    local out = {}
+    for i = 1, #s do
+      local b = byte(s, i)
+      local m = (key + (i - 1) * 7) % 256
+      local r = 0
+      for bit = 0, 7 do
+        local p = 2 ^ bit
+        if (b % (p * 2) >= p) ~= (m % (p * 2) >= p) then r = r + p end
+      end
+      out[i] = char(r)
+    end
+    store[key] = concat(out)
+    return key
+  end
+end
+local greeting = cache[decode("${xorEnc('peel', 41)}", 41)]
+print(cache[decode("${xorEnc('Hello, decoder', 99)}", 99)])
+print(greeting)
+`;
+
+// sabit dizisi + döndürme + indeks sarmalayıcısı (Prometheus ConstantArray biçimi)
+const arr = ['alpha', 'beta', 'gamma', 'delta'];
+const rot = [...arr.slice(1), arr[0]];
+fx['const-array'] = `-- EXPECT: print("alpha", "delta")
+-- EXPECT: print("gammabeta")
+-- GONE: 7000
+local K = { ${rot.map((s) => JSON.stringify(s)).join(', ')} }
+for _, r in ipairs({ { 1, 4 }, { 1, 3 } }) do
+  while r[1] < r[2] do
+    K[r[1]], K[r[2]], r[1], r[2] = K[r[2]], K[r[1]], r[1] + 1, r[2] - 1
+  end
+end
+local function at(i) return K[i + 7000] end
+print(at(-6997), at(-6998))
+print(at(-6999) .. at(-6996))
+`;
+
+// çözücü anahtarı dış girdiden: çağrılar açılmamalı, ortam okuması kalmalı
+fx['string-decoder-keep'] = `-- KEEP: os.getenv
+-- KEEP: dec(
+local key = tonumber(os.getenv('PEEL_KEY') or '3') or 3
+local function dec(s)
+  return (s:gsub('.', function(c) return string.char((c:byte() - key) % 256) end))
+end
+print(dec("${[...'secret'].map((c) => String.fromCharCode(c.charCodeAt(0) + 3)).join('')}"))
+`;
+
+// metatable vekilli local'ler (Prometheus ProxifyLocals biçimi) ve dosya sarmalayıcısı (WrapInFunction)
+fx['proxify-locals'] = `-- EXPECT: x = x + i
+-- EXPECT: print("total", x)
+-- GONE: setmetatable
+local E = function() end
+local x = setmetatable({ v = 1 }, { __mul = function(t, v) t.v = v end, __sub = function(t, k) return t.v end })
+local name = setmetatable({ w = "proxy" }, { __concat = function(t, k) return rawget(t, "w") end, __index = function(t, v) t.w = v end })
+for i = 1, 3 do
+  E(x * ((x - "a") + i))
+end
+print("total", x - "b")
+print(name .. "q")
+`;
+
+fx['wrap-function'] = `-- EXPECT: print("wrapped", select("#", ...))
+-- GONE: function(...)
+return (function(...)
+  local a = "wrapped"
+  print(a, select("#", ...))
+end)(...)
+`;
+
+// anlamsız local adları türetilen adlarla değişir; küresel ad olduğu gibi kalır
+fx['rename'] = `-- EXPECT: for i = 1, 2 do
+-- EXPECT: local function fn(param)
+-- GONE: IlIlIlIl
+-- GONE: l_0_
+-- KEEP: lIlIlI = true
+lIlIlI = true
+local l_0_ = { "renamed" }
+local function IlIlIlIl(IIlIlI) return IIlIlI .. "!" end
+for _0x1a = 1, 2 do
+  print(IlIlIlIl(l_0_[_0x1a] or "x"), _0x1a, lIlIlI)
+end
+`;
+
+// Luau sözdizimi: tipler, +=, continue, enterpolasyon, if ifadesi; indirilip luau-web'de doğrulanır, katman açılır
+fx['luau-syntax'] = `-- LUAU: verified
+-- EXPECT: print("layer")
+-- EXPECT: count = count + i
+-- GONE: loadstring
+-- GONE: then continue
+type Pair = { key: string, n: number }
+local function label(p: Pair): string
+  return \`{p.key}:{p.n}\`
+end
+local count: number = 0
+for i = 1, 4 do
+  if i == 2 then continue end
+  count += i
+end
+local size = if count > 5 then "big" else "small"
+loadstring("print('" .. "layer" .. "')")()
+print(label({ key = "luau", n = count }), size, 0b11, 1_000)
+`;
+
+// Luau Roblox yükleyicisi: dış girdiyle yüklenen kod açılmaz
+fx['luau-roblox-keep'] = `-- LUAU: verified
+-- KEEP: HttpGet
+-- KEEP: loadstring(
+local url: string = "${URL_}"
+local body: string = game:HttpGet(url)
+local fn = loadstring(body)
+if fn then fn() end
+print(\`loaded {#body}\`)
+`;
+
+// Prometheus Vmify çıktısı (benchmark örneğinden): VM dağıtıcısı kalkmalı, dizgeler ve çağrılar görünmeli
+const vmSample = decodeFixture(readFileSync(new URL('../test/bench/prom-vmify--mini.lua.x', import.meta.url), 'utf8')).toString('latin1');
+fx['vm-prometheus'] = `-- EXPECT: "Hello"
+-- EXPECT: "Grace"
+-- GONE: unknown VM opcode
+${vmSample}
 `;
 
 for (const [name, src] of Object.entries(fx)) writeFileSync(new URL(`${name}.lua.x`, dir), encodeFixture(Buffer.from(src)));

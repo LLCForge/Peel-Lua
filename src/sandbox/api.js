@@ -13,7 +13,10 @@ export function sandboxApi(send) {
     /** variant: 1 → dış girdi sondası (HTTP yanıtı, dosya, ortam değerleri farklı) */
     async run({ code, version = '5.1', platform = null, variant = 0, timeoutMs = RUN_TIMEOUT_MS }) {
       await load(version);
-      return send({ type: 'run', code, version, platform, variant, deadlineMs: timeoutMs });
+      const msg = { type: 'run', code, version, platform, variant, deadlineMs: timeoutMs };
+      const r = await send(msg);
+      // motor çöktüyse (wasm tuzağı) yeni süreçte bir kez daha
+      return r.crashed ? send(msg) : r;
     },
     async evaluate({ exprs, version = '5.1', timeoutMs = RUN_TIMEOUT_MS }) {
       if (!exprs.length) return [];
